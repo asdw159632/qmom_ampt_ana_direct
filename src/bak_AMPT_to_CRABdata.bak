@@ -1,0 +1,388 @@
+#include <iostream>
+#include <fstream>
+#include <strstream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <TMath.h>
+#include <string.h>
+
+#include <TROOT.h>
+#include <TFile.h>
+#include <TH3.h>
+#include <TF3.h>
+#include <TStyle.h>
+#include <TCanvas.h>
+#include <TLegend.h>
+#include <TMinuit.h>
+#include <TGraph.h>
+#include "TVector3.h"
+#include "TVector2.h"
+#include "TH1D.h"
+#include "TH2D.h"
+#include "TH3D.h"
+#include "TProfile.h"
+#include "TProfile2D.h"
+#include "TLorentzVector.h"
+#include "TLorentzRotation.h"
+#include "TSystem.h"
+#include <math.h>
+
+//#include "analysis.h"
+//#include "particles.h"
+#include "AMPT.h"
+
+using namespace std;
+
+bool condition(Int_t IDAART, Double_t PxAART, Double_t PyAART, Double_t PzAART, Double_t EnergyAART, Double_t X, Double_t Y, Double_t Z, Double_t T);
+double psi2(AMPT* event);
+void participant_plane_correction(Double_t *px, Double_t *py, Double_t *x, Double_t *y, Double_t psi);
+
+
+int main(int argc,char *argv[])
+{
+  cout<<"//////////////////////////////////////////////"<<endl;
+  cout<<endl;
+  cout<<"this program start at "<<endl;
+  system("date");
+  cout<<endl;
+  cout<<"//////////////////////////////////////////////"<<endl;
+
+  //TChain *chain = new TChain("AMPT");
+
+  if(argc!=3) return 0;
+
+  const char *FileInput=0;
+  const char *FileOutput=0;
+//  char *FilePar=0;
+
+ /* if(argc==1)
+  {
+    FileInput  = "example.list";
+    FileOutput = "example.root";
+  }*/
+
+  if(argc==3)//执行文件 list文件 任意输出文件名
+  {
+    FileInput = argv[1];
+    FileOutput = argv[2];
+  } 
+
+/*  if(argc==4)
+  {
+    FileInput = argv[1];
+    FilePar = argv[2];
+    FileOutput = argv[3];
+  }
+*/
+
+  int mode=1;//1 for output one .dat; 0 for output a list of .dat files.
+  if (strstr(FileOutput,".list"))mode=0;
+  int datnumber = 0;
+  int datnumber2=0;
+  int rootnumber=0;
+  int datapacket=30;
+  //int lastdatnumber = 0;
+  
+  int fileNumber = 0;
+  int test=1;
+  int test2=1;
+  char FileList[512];
+  string temps;
+  char outputlist[10000][512];
+
+  ofstream file;
+  file.open("Nevents.dat");
+  ifstream output;
+  output.open(FileOutput);
+  if (!(output))
+  {
+    printf("can not open output-list file\n");
+    return 0;
+  }
+  for (int i=0;i<10000&&output.good();i++)
+  {
+    output.getline(outputlist[i],512);
+  }
+  output.close();
+
+  for (int i=0;i<1400&&test2==1;i++)
+  //for (int datnumber=0;datnumber<10000;datnumber++)
+  {
+  TChain *chain = new TChain("AMPT");
+  ifstream inputStream;
+  inputStream.open(FileInput);
+  if (!(inputStream))
+  {
+    printf("can not open input-list file\n");
+    return 0;
+  }
+  for (int j=0;fileNumber<(datnumber+1)*datapacket && inputStream.good();j++)
+//  for (int j=0;(fileNumber+1)%datapacket && inputStream.good();j++)
+  {
+  if (j<datnumber2){
+	getline(inputStream,temps);
+	test =0;
+	continue;
+}
+    inputStream.getline(FileList,512);
+
+    if(strstr(FileList,".root")==NULL)
+    {
+      printf("%s is not a root-file adress!!!\n",FileList);
+      test=0;
+	test2=0;
+      continue;
+    }
+    if  ( inputStream.good() )
+    {
+      TFile *ftmp = new TFile(FileList);
+	test2=1;
+	rootnumber++;
+      if(!ftmp||!(ftmp->IsOpen())||!(ftmp->GetNkeys()))
+      {
+	printf(" file %s error in opening!!!\n",FileList);
+	test =0;
+      }
+      else
+      {
+   	test=1;
+	printf(" read in file %s\n",FileList);
+	chain->Add(FileList);
+	fileNumber++;
+      }
+      delete ftmp;
+    }
+    else{
+	test2=0;}
+  //if (datnumber>lastdatnumber)lastdatnumber=datnumber;
+}
+  //printf("flie number%d\n",fileNumber);
+  inputStream.close();
+
+  printf(" files read in %d\n",fileNumber);
+
+  AMPT* ampt = new AMPT();
+  ampt->SetData(chain);
+
+  int mNEvents = (int)chain->GetEntries();
+  Double_t impactpar=0;
+  Double_t XHZPC[25000]={0};
+  Double_t YHZPC[25000]={0};
+  Double_t Xavg=0;
+  Double_t Yavg=0;
+  TVector2 theRho;
+  Double_t QPsi_2cos=0;
+  Double_t QPsi_2sin=0;
+  Double_t vPsi_pp=0;
+  Int_t n_avg=0;
+  Int_t IDAART[25000]={0};
+  Double_t PxAART[25000]={0};
+  Double_t PyAART[25000]={0};
+  Double_t PzAART[25000]={0};
+  Double_t EnergyAART[25000]={0};
+  Double_t MassAART[25000]={0};
+  Double_t XAART[25000]={0};
+  Double_t YAART[25000]={0};
+  Double_t ZAART[25000]={0};
+  Double_t TAART[25000]={0};
+  TVector2 xy;
+  TVector3 mR;
+  TVector3 mP;
+  Double_t artTime=100.;
+  Double_t temp[10][2500];
+  memset(temp,0,sizeof(temp));
+
+  ofstream fileout;
+	datnumber2=rootnumber;
+/*  if(mode==1){
+  fileout.open(FileOutput);
+  fileout<<"line1"<<endl;
+  fileout<<"line2"<<endl;
+  fileout<<"line3"<<endl;
+}*/
+
+  //if(test==1||fileNumber%2==1){
+  if(test==1){
+	  fileout.open(outputlist[datnumber]);
+	  fileout<<"line1"<<endl;
+	  fileout<<"line2"<<endl;
+	  fileout<<"line3"<<endl;
+	  printf("%s\n",outputlist[datnumber]);
+	  datnumber++;
+  }
+
+  int EventCount = 0;
+  int TrackCount = 0;
+  Double_t psi_2 = 0;
+  for(int mNEventCount = 0; mNEventCount < mNEvents; mNEventCount++)
+  {
+
+    chain->GetEntry(mNEventCount);
+    impactpar = ampt->ImPar();
+
+    //if(impactpar<1)
+	if(impactpar<2)
+    {
+//Boost
+	  Xavg=0;
+	  Yavg=0;
+	  QPsi_2cos=0;
+	  QPsi_2sin=0;
+	  vPsi_pp=0;
+	  n_avg=0;
+	  for(int track=0; track < ampt->Ntrack_HZPC(); track++)
+	  {
+		XHZPC[track] = ampt->mXHZPC(track);
+		YHZPC[track] = ampt->mYHZPC(track);
+		Xavg += XHZPC[track];
+		Yavg += YHZPC[track];
+		n_avg ++;
+	  }
+	Xavg /= n_avg;
+	Yavg /= n_avg;
+	  for(int track=0; track < ampt->Ntrack_HZPC(); track++)
+	  {
+		theRho.Set(XHZPC[track]-Xavg,YHZPC[track]-Yavg);
+		QPsi_2cos += pow(theRho.Mod(),2)*cos(2.*theRho.Phi());
+		QPsi_2sin += pow(theRho.Mod(),2)*sin(2.*theRho.Phi());
+	  }
+	vPsi_pp=(atan2(QPsi_2sin,QPsi_2cos)+M_PI)/2.;
+	  int TrackCount = 0;
+//Reading Data
+	  for(int track=0; track < ampt->Ntrack_AART(); track++)
+	  {
+		IDAART[track] = ampt->mIDAART(track);
+		PxAART[track] = ampt->mPxAART(track);
+		PyAART[track] = ampt->mPyAART(track);
+		PzAART[track] = ampt->mPzAART(track);
+		EnergyAART[track] = ampt->mEnergyAART(track);
+		MassAART[track] = sqrt(pow(EnergyAART[track],2)-pow(PxAART[track],2)-pow(PyAART[track],2)-pow(PzAART[track],2));
+		if(isnan(MassAART[track])) MassAART[track] = 0;
+		XAART[track] = ampt->mXAART(track);
+		YAART[track] = ampt->mYAART(track);
+		ZAART[track] = ampt->mZAART(track);
+		TAART[track] = ampt->mTimeAART(track);
+
+		xy.Set(XAART[track]-Xavg,YAART[track]-Yavg);
+		xy.SetMagPhi(xy.Mod(),xy.Phi()-vPsi_pp);
+		XAART[track]=xy.X();
+		YAART[track]=xy.Y();
+		xy.Set(PxAART[track],PyAART[track]);
+		xy.SetMagPhi(xy.Mod(),xy.Phi()-vPsi_pp);
+		PxAART[track]=xy.X();
+		PyAART[track]=xy.Y();
+		if(condition(IDAART[track], PxAART[track], PyAART[track], PzAART[track], EnergyAART[track], XAART[track], YAART[track], ZAART[track], TAART[track]))
+		{
+		  TrackCount = TrackCount+1;
+//		  participant_plane_correction(&PxAART[track], &PyAART[track], &XAART[track], &YAART[track], psi_2);
+		  mR.SetXYZ(XAART[track],YAART[track],ZAART[track]);
+		  mP.SetXYZ(PxAART[track],PyAART[track],PzAART[track]);
+		  mR = mR + (artTime-TAART[track])/EnergyAART[track]*mP;
+		  temp[0][TrackCount]=IDAART[track];
+		  temp[1][TrackCount]=PxAART[track];
+		  temp[2][TrackCount]=PyAART[track];
+		  temp[3][TrackCount]=PzAART[track];
+		  temp[4][TrackCount]=EnergyAART[track];
+		  temp[5][TrackCount]=MassAART[track];
+		  temp[6][TrackCount]=mR.X();
+		  temp[7][TrackCount]=mR.Y();
+		  temp[8][TrackCount]=mR.Z();
+		  temp[9][TrackCount]=TAART[track];
+		}
+		else
+			continue;
+	 }
+
+	  if(TrackCount>0)
+	  {
+		  EventCount = EventCount+1;
+		  fileout<<EventCount<<" "<<TrackCount<<" "<<0.00000<<" "<<0.00000<<endl;//事件信息
+		  for (int itrack=1;itrack<=TrackCount;itrack++){
+			  fileout<<itrack<<" "<<temp[0][itrack]<<" "<<temp[1][itrack]<<" "<<temp[2][itrack]<<" "<<temp[3][itrack]<<" "<<temp[4][itrack]<<" "<<temp[5][itrack]<<" "<<temp[6][itrack]<<" "<<temp[7][itrack]<<" "<<temp[8][itrack]<<" "<<temp[9][itrack]<<endl;
+			  }
+	  }
+	  TrackCount = 0;
+	  psi_2 = psi2(ampt);
+	  //cout<<psi_2<<endl;
+    }
+	else
+		continue;
+	  TrackCount = 0;
+  }
+  //cout<<TrackCount<<endl;
+  //if(datnumber*2==fileNumber)
+  fileout.close();
+  file<<EventCount<<endl;
+  delete ampt;
+  delete chain;
+  }
+  file.close();
+
+  //delete chain;
+  if (mode ==0)cout<<"output "<<datnumber<<" .dat files"<<endl;
+  cout<<"//////////////////////////////////////////////"<<endl;
+  cout<<endl;
+  cout<<"this program finished at "<<endl;
+  system("date");
+  cout<<endl;
+  cout<<"//////////////////////////////////////////////"<<endl;
+
+  return 0;
+}
+
+bool condition(Int_t IDAART, Double_t PxAART, Double_t PyAART, Double_t PzAART, Double_t EnergyAART, Double_t X, Double_t Y, Double_t Z, Double_t T)
+{
+//	if(sqrt(X*X+Y*Y+Z*Z)>25) return 0;
+	Double_t Pt = sqrt(pow(PxAART,2)+pow(PyAART,2));
+//	Double_t r = sqrt(X*X+Y*Y+Z*Z);
+	Double_t y = 0.5*log((EnergyAART+PzAART)/(EnergyAART-PzAART));
+	//if(IDAART==211 && 0.1<Pt && Pt<3 && -1<y && y<1)
+	//if(IDAART==333 && 0.2<Pt && Pt<1.5 && -1<y && y<1)
+	//if(IDAART==2212 && 0.2<Pt && Pt<1.5 && -1<y && y<1)
+	if(IDAART==211 && 0.2<Pt && Pt<1.5 && -1<y && y<1)
+	//if(IDAART==321 && 0.2<Pt && Pt<1.5 && -1<y && y<1)
+	//if(IDAART==3122 && 0.2<Pt && Pt<1.5 && -1<y && y<1)
+		return 1;
+	else 
+		return 0;
+}
+
+double psi2(AMPT* event)
+{
+  double PI = TMath::Pi();
+  TVector2 participant_nucleon;
+  Double_t r2_cos = 0;
+  Double_t r2_sin = 0;
+
+  int multi_INUCP = event->Ntrack_INUCP();
+  for(int i=0; i<multi_INUCP; i++)
+  {
+    if(event->mNCOLLP(i)<1) continue;
+    participant_nucleon.Set(event->mXINUCP(i),event->mYINUCP(i));
+    r2_cos += pow(participant_nucleon.Mod(),2)*cos(2.*participant_nucleon.Phi());
+    r2_sin += pow(participant_nucleon.Mod(),2)*sin(2.*participant_nucleon.Phi());
+  }
+  int multi_INUCT = event->Ntrack_INUCT();
+  for(int i=0; i<multi_INUCT; i++)
+  {
+    if(event->mNCOLLT(i)<1) continue;
+    participant_nucleon.Set(event->mXINUCT(i),event->mYINUCT(i));
+    r2_cos += pow(participant_nucleon.Mod(),2)*cos(2.*participant_nucleon.Phi());
+    r2_sin += pow(participant_nucleon.Mod(),2)*sin(2.*participant_nucleon.Phi());
+  }
+  Double_t psi = (atan2(r2_sin,r2_cos)+PI)/2.;
+  return psi;
+}
+
+void participant_plane_correction(Double_t *px, Double_t *py, Double_t *x, Double_t *y, Double_t psi)
+{
+	Double_t pt = sqrt(pow(*px,2)+pow(*py,2));
+	Double_t r = sqrt(pow(*x,2)+pow(*y,2));
+	Double_t phi_pt = atan2(*py,*px)-psi;
+	Double_t phi = atan2(*y,*x)-psi;
+	*px = pt*cos(phi_pt);
+	*py = pt*sin(phi_pt);
+	*x = r*cos(phi);
+	*y = r*sin(phi);
+}
+

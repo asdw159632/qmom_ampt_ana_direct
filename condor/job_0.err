@@ -1,0 +1,18 @@
+rm: cannot remove `result_dat/*.dat': No such file or directory
+rm: cannot remove `result_gif/*.gif': No such file or directory
+rm: cannot remove `result_root/*.root': No such file or directory
+In file included from /home/zhangliang/qmom_ampt_ana_direct/src/head.h:54,
+                 from /home/zhangliang/qmom_ampt_ana_direct/src/analysis.cxx:1:
+/home/zhangliang/qmom_ampt_ana_direct/src/fit.h: In function 'double getqinv(double)':
+/home/zhangliang/qmom_ampt_ana_direct/src/fit.h:31: error: 'par6' was not declared in this scope
+In file included from /home/zhangliang/qmom_ampt_ana_direct/src/analysis.cxx:1:
+/home/zhangliang/qmom_ampt_ana_direct/src/head.h: In function 'void print(TProfile*, char*)':
+/home/zhangliang/qmom_ampt_ana_direct/src/head.h:329: error: 'fit' was not declared in this scope
+/home/zhangliang/qmom_ampt_ana_direct/src/fit.h: In function 'int main(int, char**)':
+/home/zhangliang/qmom_ampt_ana_direct/src/fit.h:19: error: too few arguments to function 'void readqinv(int, int, TH1D*)'
+/home/zhangliang/qmom_ampt_ana_direct/src/analysis.cxx:501: error: at this point in file
+/home/zhangliang/qmom_ampt_ana_direct/src/fit.h:19: error: too few arguments to function 'void readqinv(int, int, TH1D*)'
+/home/zhangliang/qmom_ampt_ana_direct/src/analysis.cxx:504: error: at this point in file
+/home/zhangliang/qmom_ampt_ana_direct/src/fit.h:19: error: too few arguments to function 'void readqinv(int, int, TH1D*)'
+/home/zhangliang/qmom_ampt_ana_direct/src/analysis.cxx:507: error: at this point in file
+make: *** [/home/zhangliang/qmom_ampt_ana_direct/obj/analysis.o] Error 1

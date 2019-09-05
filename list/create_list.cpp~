@@ -1,0 +1,33 @@
+#include <iostream>
+#include <fstream>
+#include <cstdlib>
+
+using namespace std;
+
+int main(){
+	char filepath[256] = "/home/szhang/work/ampt-initial-fluctuation/analysis-flow/ampt-initial-fluctuation-DATA/minibias/c12-Au197-200GeV/data-nofluc/";
+	int n = 0;
+	ofstream listout;
+	listout.open("list-0.list");
+	if(listout.fail()){
+		cout<<"Sorry, couldn¡¯t open file"<<endl;
+		exit(1);
+	}
+	for(int i = 1; i < 7; i++){
+		for(int j = 0; j < 100; j++){
+			listout<<filepath<<"run"<<i<<"/data-"<<j<<".root"<<endl;
+			n++;
+		}
+	}
+	listout.close();
+
+	cout<<"there are "<<n<<" files"<<endl;
+	cout<<"//////////////////////////////////////////////"<<endl;
+	cout<<endl;
+	cout<<"this program finished at "<<endl;
+	system("date");
+	cout<<endl;
+	cout<<"//////////////////////////////////////////////"<<endl;
+
+	return 0;
+}

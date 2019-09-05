@@ -1,0 +1,7 @@
+rm -f /home/zhangliang/qmom_ampt_ana_direct/obj/*.o 
+g++     -O -Wall -fPIC -I /opt/root53424/include/ -I/home/zhangliang/qmom_ampt_ana_direct/src/ -Wno-deprecated -c /home/zhangliang/qmom_ampt_ana_direct/src/AMPT.cxx -o /home/zhangliang/qmom_ampt_ana_direct/obj/AMPT.o
+
+g++     -O -Wall -fPIC -I /opt/root53424/include/ -I/home/zhangliang/qmom_ampt_ana_direct/src/ -Wno-deprecated -c /home/zhangliang/qmom_ampt_ana_direct/src/analysis.cxx -o /home/zhangliang/qmom_ampt_ana_direct/obj/analysis.o
+
+Make Failed!
+
